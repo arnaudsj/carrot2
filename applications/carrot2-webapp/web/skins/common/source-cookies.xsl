@@ -11,7 +11,7 @@
   <!-- Active source, if user cookie not present, default is used -->
   <xsl:variable name="active-source-id">
     <xsl:choose>
-      <xsl:when test="$user-active-source and /page/config/components/sources/source[@id = $user-active-source]">
+      <xsl:when test="string-length(/page/request/@query) = 0 and $user-active-source and /page/config/components/sources/source[@id = $user-active-source]">
         <xsl:value-of select="$user-active-source" />
       </xsl:when>
       <xsl:otherwise>
@@ -19,6 +19,8 @@
       </xsl:otherwise>
     </xsl:choose>
   </xsl:variable>
+  
+  <xsl:template match="page" mode="active-source"><xsl:value-of select="$active-source-id" /></xsl:template>
   
   <!-- 
     Overrides the default template for tabs, puts tabs in the order 
