@@ -1,3 +1,14 @@
+/*
+ * Carrot2 project.
+ *
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
+ * All rights reserved.
+ *
+ * Refer to the full license file "carrot2.LICENSE"
+ * in the root folder of the repository checkout or at:
+ * http://www.carrot2.org/carrot2.LICENSE
+ */
+
 package org.carrot2.text.linguistic;
 
 import java.io.IOException;
@@ -5,19 +16,34 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.text.util.MutableCharArray;
 import org.carrot2.util.resource.IResource;
 import org.carrot2.util.resource.ResourceUtils;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 
 /**
  * Holds lexical resources for one language.
  */
 final class LexicalResources
 {
+    private final static Logger logger = org.slf4j.LoggerFactory
+        .getLogger(LexicalResources.class);
+
+    /*
+     * If we cannot find resources for some languages, emit warning once only.
+     */
+
+    final static EnumSet<LanguageCode> missingStopwordsCache = EnumSet
+        .noneOf(LanguageCode.class);
+
+    final static EnumSet<LanguageCode> missingStoplabelsCache = EnumSet
+        .noneOf(LanguageCode.class);
+
+    final static EnumSet<LanguageCode> regexpProblemsCache = EnumSet
+        .noneOf(LanguageCode.class);
+
     final Set<MutableCharArray> stopwords;
     final List<Pattern> stoplabels;
 
@@ -41,16 +67,18 @@ final class LexicalResources
         return new LexicalResources(mergedStoplabels, mergedStopwords);
     }
 
-    static LexicalResources load(ResourceUtils resourceLoaders,
-        LanguageCode lang)
+    /**
+     * Loads lexical resources (stop words, stop labels) for a given {@link LanguageCode}.
+     */
+    static LexicalResources load(ResourceUtils resourceLoaders, LanguageCode lang)
     {
-        return new LexicalResources(loadStopLabels(resourceLoaders, lang),
-            loadStopWords(resourceLoaders, lang));
+        return new LexicalResources(loadStopLabels(resourceLoaders, lang), loadStopWords(
+            resourceLoaders, lang));
     }
 
     /**
-     * Loads common words associated with the given language. Logs an error and
-     * recovers silently if the given resource cannot be found.
+     * Loads common words associated with the given language. Logs an error and recovers
+     * silently if the given resource cannot be found.
      */
     private static Set<MutableCharArray> loadStopWords(ResourceUtils resourceLoaders,
         LanguageCode lang)
@@ -65,29 +93,40 @@ final class LexicalResources
 
             if (resource == null)
             {
-                throw new IOException("Common words resource not found: "
-                    + resourceName);
+                throw new IOException("Resource not found: " + resourceName);
             }
 
             for (String word : TextResourceUtils.load(resource))
             {
-                result.add(new MutableCharArray(word));
+                result.add(new MutableCharArray(word.toLowerCase()));
             }
 
             return result;
         }
         catch (IOException e)
         {
-            Logger.getLogger(DefaultLanguageModelFactory.class).warn(
-                "Common words for language: " + lang.toString() + " not found");
-
+            problemWarn(missingStopwordsCache, lang,
+                "Common words could not be loaded for language " + lang.toString() + ": "
+                    + e.getMessage());
             return Collections.emptySet();
         }
     }
 
     /**
-     * Loads stop labels associated with the given language. Logs an error and
-     * recovers silently if the given resource cannot be found.
+     * Warn about a problem with resources (once).
+     */
+    private static void problemWarn(EnumSet<LanguageCode> issueCache, LanguageCode lang,
+        String message)
+    {
+        if (issueCache.contains(lang)) return;
+        issueCache.add(lang);
+
+        logger.warn(message);
+    }
+
+    /**
+     * Loads stop labels associated with the given language. Logs an error and recovers
+     * silently if the given resource cannot be found.
      */
     private static List<Pattern> loadStopLabels(ResourceUtils resourceLoaders,
         LanguageCode lang)
@@ -102,8 +141,7 @@ final class LexicalResources
 
             if (resource == null)
             {
-                throw new IOException("Stop labels resource not found: "
-                    + resourceName);
+                throw new IOException("Resource not found: " + resourceName);
             }
 
             for (String word : TextResourceUtils.load(resource))
@@ -114,9 +152,9 @@ final class LexicalResources
                 }
                 catch (PatternSyntaxException e)
                 {
-                    Logger.getLogger(DefaultLanguageModelFactory.class).warn(
-                        "Ignoring regular expression with syntax error: " + word
-                            + " in " + resourceName);
+                    problemWarn(regexpProblemsCache, lang,
+                        "Ignoring regular expression with syntax error: " + word + " in "
+                            + resourceName + ".");
                 }
             }
 
@@ -124,10 +162,18 @@ final class LexicalResources
         }
         catch (IOException e)
         {
-            Logger.getLogger(DefaultLanguageModelFactory.class).warn(
-                "Stop labels for language: " + lang.toString() + " not found");
-
+            problemWarn(missingStoplabelsCache, lang, "Stop labels for language "
+                + lang.toString() + " not found: " + e.getMessage());
             return Collections.emptyList();
         }
+    }
+
+    /**
+     * @return <code>true</code> if there have been issues loading resources.
+     */
+    static boolean hasIssues()
+    {
+        return !missingStoplabelsCache.isEmpty() || !missingStoplabelsCache.isEmpty()
+            || !regexpProblemsCache.isEmpty();
     }
 }

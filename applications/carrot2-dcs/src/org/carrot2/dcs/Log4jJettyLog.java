@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -13,29 +12,29 @@
 
 package org.carrot2.dcs;
 
-import org.apache.log4j.Level;
-import org.mortbay.log.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A Log4j implementation of Jetty logger.
+ * A SLF4J implementation of Jetty's logger.
  */
 public class Log4jJettyLog implements org.mortbay.log.Logger
 {
-    private org.apache.log4j.Logger log;
+    private Logger log;
 
     public Log4jJettyLog()
     {
-        log = org.apache.log4j.Logger.getLogger("jetty");
+        log = LoggerFactory.getLogger("jetty");
     }
 
-    public Log4jJettyLog(org.apache.log4j.Logger log)
+    public Log4jJettyLog(org.slf4j.Logger log)
     {
         this.log = log;
     }
 
-    public Logger getLogger(String name)
+    public org.mortbay.log.Logger getLogger(String name)
     {
-        return new Log4jJettyLog(org.apache.log4j.Logger.getLogger(name));
+        return new Log4jJettyLog(LoggerFactory.getLogger(name));
     }
 
     public boolean isDebugEnabled()
@@ -45,12 +44,7 @@ public class Log4jJettyLog implements org.mortbay.log.Logger
 
     public void setDebugEnabled(boolean debug)
     {
-        if (debug)
-        {
-            log.setLevel(Level.DEBUG);
-        }
-
-        // No good way to undo when debug == false?
+        // Not implemented.
     }
 
     public void debug(String text, Throwable throwable)

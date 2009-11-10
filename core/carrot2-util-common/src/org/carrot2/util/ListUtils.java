@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -13,8 +12,7 @@
 
 package org.carrot2.util;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Utility methods for working with {@link List}s.
@@ -25,9 +23,9 @@ public final class ListUtils
     {
     }
 
-    public static <E> ArrayList<E> asArrayList(List<E> list)
+    public static <E> ArrayList<E> asArrayList(Collection<E> list)
     {
-        if (list instanceof ArrayList)
+        if (ArrayList.class.isInstance(list))
         {
             return (ArrayList<E>) list;
         }
@@ -37,7 +35,7 @@ public final class ListUtils
         }
     }
 
-    public static int [] asArray(List<Integer> list)
+    public static int [] asArray(Collection<Integer> list)
     {
         final int [] result = new int [list.size()];
         int index = 0;

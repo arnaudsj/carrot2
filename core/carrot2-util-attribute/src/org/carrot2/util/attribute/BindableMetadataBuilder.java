@@ -1,9 +1,7 @@
-
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -17,9 +15,13 @@ import java.io.*;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.tools.ant.Project;
+import org.carrot2.util.StreamUtils;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.thoughtworks.qdox.JavaDocBuilder;
+import com.thoughtworks.qdox.directorywalker.*;
 import com.thoughtworks.qdox.model.*;
 
 /**
@@ -29,6 +31,11 @@ class BindableMetadataBuilder
 {
     /** A field used in tests */
     static final String ATTRIBUTE_KEY_PARAMETER = "key";
+
+    /**
+     * ANT project this builder belongs to.
+     */
+    private final Project project;
 
     /**
      * Metadata extractors for attributes.
@@ -69,8 +76,9 @@ class BindableMetadataBuilder
     /**
      * Creates a {@link BindableMetadataBuilder} with empty commonMetadataSources.
      */
-    BindableMetadataBuilder()
+    BindableMetadataBuilder(Project project)
     {
+        this.project = project;
         commonMetadataSources = Lists.newArrayList();
     }
 
@@ -81,12 +89,36 @@ class BindableMetadataBuilder
     {
         if (file.isDirectory())
         {
-            javaDocBuilder.addSourceTree(file);
+            addSourceTree(file);
         }
         else
         {
-            javaDocBuilder.addSource(file);
+            addJavaSourceFile(file);
         }
+    }
+
+    /**
+     * A directory traversal optimized to look only for classes that have {@link Bindable}
+     * annotation (avoiding full source code parse).
+     */
+    public void addSourceTree(File file)
+    {
+        final DirectoryScanner scanner = new DirectoryScanner(file);
+        scanner.addFilter(new SuffixFilter(".java"));
+        scanner.scan(new FileVisitor()
+        {
+            public void visitFile(File currentFile)
+            {
+                try
+                {
+                    addJavaSourceFile(currentFile);
+                }
+                catch (IOException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     /**
@@ -94,8 +126,8 @@ class BindableMetadataBuilder
      */
     void addCommonMetadataSource(File file) throws FileNotFoundException, IOException
     {
-        JavaSource addSource = javaDocBuilder.addSource(file);
-        commonMetadataSources.add(addSource.getClasses()[0].getFullyQualifiedName());
+        commonMetadataSources.add(addJavaSourceFile(file).getClasses()[0]
+            .getFullyQualifiedName());
     }
 
     /**
@@ -112,20 +144,28 @@ class BindableMetadataBuilder
      */
     void buildAttributeMetadata()
     {
+
         final JavaSource [] javaSources = javaDocBuilder.getSources();
         for (final JavaSource javaSource : javaSources)
         {
-            // Take first class in a file
-            final JavaClass javaClass = javaSource.getClasses()[0];
-            if (MetadataExtractorUtils.hasAnnotation(javaClass, Bindable.class))
+            for (JavaClass javaClass : javaSource.getClasses())
             {
-                final BindableMetadata bindableMetadata = new BindableMetadata();
-                buildBindableMetadata(javaClass, bindableMetadata);
-                buildAttributeMetadata(javaClass, bindableMetadata);
-
-                for (final BindableMetadataBuilderListener listener : listeners)
+                if (MetadataExtractorUtils.hasAnnotation(javaClass, Bindable.class))
                 {
-                    listener.bindableMetadataBuilt(javaClass, bindableMetadata);
+                    final BindableMetadata bindableMetadata = new BindableMetadata();
+                    buildBindableMetadata(javaClass, bindableMetadata);
+                    buildAttributeMetadata(javaClass, bindableMetadata);
+
+                    for (final BindableMetadataBuilderListener listener : listeners)
+                    {
+                        listener.bindableMetadataBuilt(javaClass, bindableMetadata);
+                    }
+                }
+                else
+                {
+                    project.log("Skipping non-@Bindable class: "
+                        + javaClass.getFullyQualifiedName() + " from "
+                        + javaSource.getURL(), Project.MSG_DEBUG);
                 }
             }
         }
@@ -225,5 +265,18 @@ class BindableMetadataBuilder
         }
 
         return null;
+    }
+
+    /**
+     * Adds a Java source from a {@link File} read assuming UTF-8 encoding.
+     */
+    private JavaSource addJavaSourceFile(File currentFile)
+        throws UnsupportedEncodingException, IOException, FileNotFoundException
+    {
+        String source = new String(StreamUtils.readFullyAndClose(new FileInputStream(
+            currentFile)), "UTF-8");
+
+        return javaDocBuilder.addSource(new StringReader(source), currentFile
+            .getAbsolutePath());
     }
 }

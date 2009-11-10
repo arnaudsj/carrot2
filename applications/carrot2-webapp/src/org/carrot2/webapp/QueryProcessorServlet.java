@@ -1,8 +1,8 @@
+
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -14,19 +14,20 @@ package org.carrot2.webapp;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.util.*;
 
 import javax.servlet.*;
 import javax.servlet.http.*;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.carrot2.core.*;
 import org.carrot2.core.attribute.AttributeNames;
 import org.carrot2.util.MapUtils;
 import org.carrot2.util.attribute.AttributeBinder;
 import org.carrot2.util.attribute.Input;
+import org.carrot2.util.attribute.AttributeBinder.IAttributeTransformer;
 import org.carrot2.webapp.filter.QueryWordHighlighter;
 import org.carrot2.webapp.jawr.JawrUrlGenerator;
 import org.carrot2.webapp.model.*;
@@ -35,16 +36,16 @@ import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
 import org.simpleframework.xml.load.Persister;
 import org.simpleframework.xml.stream.Format;
+import org.slf4j.Logger;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.*;
 
 /**
  * Processes search requests.
  */
+@SuppressWarnings("serial")
 public class QueryProcessorServlet extends HttpServlet
 {
-    private static final long serialVersionUID = 1L;
-
     /** Controller that performs all searches */
     private transient CachingController controller;
 
@@ -55,10 +56,10 @@ public class QueryProcessorServlet extends HttpServlet
     static final String QUERY_LOG_NAME = "queryLog";
 
     /** Query logger. */
-    private transient volatile Logger queryLogger = Logger.getLogger(QUERY_LOG_NAME);
+    private transient volatile Logger queryLogger = org.slf4j.LoggerFactory.getLogger(QUERY_LOG_NAME);
 
     /** Error log */
-    private transient volatile Logger logger = Logger.getLogger(getClass());
+    private transient volatile Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
 
     /** A reference to custom log appenders. */
     private transient volatile LogInitContextListener logInitializer;
@@ -72,10 +73,9 @@ public class QueryProcessorServlet extends HttpServlet
     public final static String STATS_KEY = "stats.key";
 
     /** Response constants */
-    private final static String MIME_XML = "text/xml";
-    private final static String ENCODING_UTF = "utf-8";
-    private final static String MIME_XML_CHARSET_UTF = MIME_XML + "; charset="
-        + ENCODING_UTF;
+    private final static String UTF8 = "UTF-8";
+    private final static String MIME_XML_UTF8 = "text/xml; charset=" + UTF8;
+    private final static String MIME_TEXT_PLAIN_UTF8 = "text/plain; charset=" + UTF8;
 
     /*
      * Servlet lifecycle.
@@ -152,6 +152,17 @@ public class QueryProcessorServlet extends HttpServlet
         {
             requestParameters.put(WebappConfig.QUERY_PARAM, queryFromAlias);
         }
+        
+        // Remove query if blank. This will get the user back to the startup screen.
+       final String query = (String)requestParameters.get(WebappConfig.QUERY_PARAM);
+       if (StringUtils.isBlank(query))
+       {
+           requestParameters.remove(WebappConfig.QUERY_PARAM);
+       }
+       else
+       {
+           requestParameters.put(WebappConfig.QUERY_PARAM, query.trim());
+       }
 
         try
         {
@@ -162,7 +173,8 @@ public class QueryProcessorServlet extends HttpServlet
             requestModel.modern = UserAgentUtils.isModernBrowser(request);
             final AttributeBinder.AttributeBinderActionBind attributeBinderActionBind = new AttributeBinder.AttributeBinderActionBind(
                 Input.class, requestParameters, true,
-                AttributeBinder.AttributeTransformerFromString.INSTANCE);
+                AttributeBinder.AttributeTransformerFromString.INSTANCE,
+                UnknownToDefaultTransformer.INSTANCE);
             AttributeBinder.bind(requestModel,
                 new AttributeBinder.IAttributeBinderAction []
                 {
@@ -175,7 +187,7 @@ public class QueryProcessorServlet extends HttpServlet
             {
                 handleStatsRequest(request, response, requestParameters, requestModel);
             }
-            if (RequestType.ATTRIBUTES.equals(requestModel.type))
+            else if (RequestType.ATTRIBUTES.equals(requestModel.type))
             {
                 handleAttributesRequest(request, response, requestParameters,
                     requestModel);
@@ -204,7 +216,7 @@ public class QueryProcessorServlet extends HttpServlet
         HttpServletResponse response, Map<String, Object> requestParameters,
         RequestModel requestModel) throws Exception
     {
-        response.setContentType(MIME_XML_CHARSET_UTF);
+        response.setContentType(MIME_XML_UTF8);
         final AjaxAttributesModel model = new AjaxAttributesModel(requestModel);
 
         final Persister persister = new Persister(getPersisterFormat(requestModel));
@@ -212,13 +224,18 @@ public class QueryProcessorServlet extends HttpServlet
         setExpires(response, 60 * 24 * 7); // 1 week
     }
 
+    /**
+     * Required for serialization of attribute metadata combined with a request model.
+     */
     @Root(name = "ajax-attribute-metadata")
     private static class AjaxAttributesModel
     {
         @Element(name = "request")
+        @SuppressWarnings("unused")
         public final RequestModel requestModel;
-        
+
         @Element(name = "attribute-metadata")
+        @SuppressWarnings("unused")
         public final AttributeMetadataModel attributesModel = new AttributeMetadataModel();
 
         private AjaxAttributesModel(RequestModel requestModel)
@@ -226,7 +243,7 @@ public class QueryProcessorServlet extends HttpServlet
             this.requestModel = requestModel;
         }
     }
-    
+
     /**
      * Handles list of sources requests.
      */
@@ -234,7 +251,7 @@ public class QueryProcessorServlet extends HttpServlet
         HttpServletResponse response, Map<String, Object> requestParameters,
         RequestModel requestModel) throws Exception
     {
-        response.setContentType(MIME_XML_CHARSET_UTF);
+        response.setContentType(MIME_XML_UTF8);
         final PageModel pageModel = new PageModel(request, requestModel,
             jawrUrlGenerator, null, null);
 
@@ -256,7 +273,7 @@ public class QueryProcessorServlet extends HttpServlet
             final CachingControllerStatistics statistics = controller.getStatistics();
 
             // Sets encoding for the response writer
-            response.setContentType("text/plain; charset=utf-8");
+            response.setContentType(MIME_TEXT_PLAIN_UTF8);
             final Writer output = response.getWriter();
 
             output.write("clustering-total-queries: " + statistics.totalQueries + "\n");
@@ -328,10 +345,10 @@ public class QueryProcessorServlet extends HttpServlet
                     || RequestType.FULL.equals(requestModel.type)
                     || RequestType.CARROT2.equals(requestModel.type))
                 {
-                    logQuery(Level.DEBUG, requestModel, null);
+                    logQuery(true, requestModel, null);
                     processingResult = controller.process(requestParameters,
                         requestModel.source, requestModel.algorithm);
-                    logQuery(Level.INFO, requestModel, processingResult);
+                    logQuery(false, requestModel, processingResult);
                 }
                 else if (RequestType.DOCUMENTS.equals(requestModel.type))
                 {
@@ -348,7 +365,7 @@ public class QueryProcessorServlet extends HttpServlet
         }
 
         // Send response, sets encoding of the response writer.
-        response.setContentType(MIME_XML_CHARSET_UTF);
+        response.setContentType(MIME_XML_UTF8);
         final PageModel pageModel = new PageModel(request, requestModel,
             jawrUrlGenerator, processingResult, processingException);
 
@@ -365,18 +382,22 @@ public class QueryProcessorServlet extends HttpServlet
         }
     }
 
-    private void logQuery(Level p, RequestModel requestModel, ProcessingResult processingResult)
+    private void logQuery(boolean debug, RequestModel requestModel,
+        ProcessingResult processingResult)
     {
-        if (!queryLogger.isEnabledFor(p)) return;
+        if (debug && !queryLogger.isDebugEnabled()) return;
+        if (!queryLogger.isInfoEnabled()) return;
 
-        final String message = 
-                requestModel.algorithm + "," + requestModel.source + ","
-                + requestModel.results + ","
-                + (processingResult == null ? "-" : 
-                    processingResult.getAttributes().get(AttributeNames.PROCESSING_TIME_TOTAL))
-                + "," + requestModel.query;
+        final String message = requestModel.algorithm
+            + ","
+            + requestModel.source
+            + ","
+            + requestModel.results
+            + ","
+            + (processingResult == null ? "-" : processingResult.getAttributes().get(
+                AttributeNames.PROCESSING_TIME_TOTAL)) + "," + requestModel.query;
 
-        this.queryLogger.log(p, message);
+        if (debug) queryLogger.debug(message); else queryLogger.info(message);
     }
 
     private void setExpires(HttpServletResponse response, int minutes)
@@ -391,7 +412,7 @@ public class QueryProcessorServlet extends HttpServlet
     private Format getPersisterFormat(RequestModel requestModel)
     {
         return new Format(2, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-            + "<?xml-stylesheet type=\"text/xsl\" href=\"@"
+            + "<?ext-stylesheet resource=\""
             + WebappConfig.getContextRelativeSkinStylesheet(requestModel.skin) + "\" ?>");
     }
 
@@ -408,5 +429,95 @@ public class QueryProcessorServlet extends HttpServlet
         }
 
         return result;
+    }
+
+    /**
+     * A transformer that replaces unknown source, document, skin, results and view values
+     * to default values.
+     */
+    private static class UnknownToDefaultTransformer implements IAttributeTransformer
+    {
+        private final Map<String, Collection<?>> knownValues;
+        private final Map<String, Object> defaultValues;
+
+        private final static UnknownToDefaultTransformer INSTANCE = new UnknownToDefaultTransformer(
+            WebappConfig.INSTANCE);
+
+        private UnknownToDefaultTransformer(WebappConfig config)
+        {
+            knownValues = Maps.newHashMap();
+            defaultValues = Maps.newHashMap();
+
+            // Result sizes
+            final Set<Integer> resultSizes = Sets.newHashSet();
+            for (ResultsSizeModel size : config.sizes)
+            {
+                resultSizes.add(size.size);
+            }
+            knownValues.put(WebappConfig.RESULTS_PARAM, resultSizes);
+            defaultValues.put(WebappConfig.RESULTS_PARAM, ModelWithDefault
+                .getDefault(WebappConfig.INSTANCE.sizes).size);
+
+            // Skins
+            final Set<String> skinIds = Sets.newHashSet();
+            for (SkinModel skin : config.skins)
+            {
+                skinIds.add(skin.id);
+            }
+            knownValues.put(WebappConfig.SKIN_PARAM, skinIds);
+            defaultValues.put(WebappConfig.SKIN_PARAM, ModelWithDefault
+                .getDefault(WebappConfig.INSTANCE.skins).id);
+
+            // Views
+            final Set<String> viewIds = Sets.newHashSet();
+            for (ResultsViewModel view : config.views)
+            {
+                viewIds.add(view.id);
+            }
+            knownValues.put(WebappConfig.VIEW_PARAM, viewIds);
+            defaultValues.put(WebappConfig.VIEW_PARAM, ModelWithDefault
+                .getDefault(WebappConfig.INSTANCE.views).id);
+
+            // Sources
+            knownValues.put(WebappConfig.SOURCE_PARAM,
+                WebappConfig.INSTANCE.sourceAttributeMetadata.keySet());
+            defaultValues.put(WebappConfig.SOURCE_PARAM, WebappConfig.INSTANCE.components
+                .getSources().get(0).getId());
+
+            // Algorithms
+            knownValues
+                .put(
+                    WebappConfig.ALGORITHM_PARAM,
+                    Lists
+                        .transform(
+                            WebappConfig.INSTANCE.components.getAlgorithms(),
+                            ProcessingComponentDescriptor.ProcessingComponentDescriptorToId.INSTANCE));
+            defaultValues.put(WebappConfig.ALGORITHM_PARAM,
+                WebappConfig.INSTANCE.components.getAlgorithms().get(0).getId());
+
+        }
+
+        public Object transform(Object value, String key, Field field,
+            Class<? extends Annotation> bindingDirectionAnnotation)
+        {
+            final Object defaultValue = defaultValues.get(key);
+
+            // Check if we want to handle this attribute at all
+            if (defaultValue != null)
+            {
+                if (knownValues.get(key).contains(value))
+                {
+                    return value;
+                }
+                else
+                {
+                    return defaultValue;
+                }
+            }
+            else
+            {
+                return value;
+            }
+        }
     }
 }

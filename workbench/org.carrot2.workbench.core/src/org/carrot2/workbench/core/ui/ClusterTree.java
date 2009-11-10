@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -15,7 +14,7 @@ package org.carrot2.workbench.core.ui;
 
 import java.util.*;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.core.*;
 import org.eclipse.jface.viewers.*;
 import org.eclipse.swt.SWT;
@@ -126,7 +125,7 @@ public final class ClusterTree extends Composite implements IPostSelectionProvid
      */
     public void show(final ProcessingResult result)
     {
-        Logger.getLogger("SEL: ").debug("Selection changed: " + result);
+        org.slf4j.LoggerFactory.getLogger("SEL: ").debug("Selection changed: " + result);
         final List<Cluster> clusters = result.getClusters();
         show(clusters);
     }
@@ -136,7 +135,7 @@ public final class ClusterTree extends Composite implements IPostSelectionProvid
      */
     public void clear()
     {
-        Logger.getLogger("SEL: ").debug("Selection changed: CLEAR");
+        org.slf4j.LoggerFactory.getLogger("SEL: ").debug("Selection changed: CLEAR");
         
         treeViewer.setInput(Collections.EMPTY_LIST);
     }
@@ -153,7 +152,7 @@ public final class ClusterTree extends Composite implements IPostSelectionProvid
         treeViewer.setLabelProvider(new ClusterLabelProvider());
         treeViewer.setContentProvider(contentProvider);
         treeViewer.setInput(new ArrayList<ClusterWithParent>());
-        treeViewer.setAutoExpandLevel(2);
+        treeViewer.setAutoExpandLevel(1);
     }
 
     public void addSelectionChangedListener(ISelectionChangedListener listener)
@@ -189,5 +188,15 @@ public final class ClusterTree extends Composite implements IPostSelectionProvid
     public void selectionChanged(IWorkbenchPart part, ISelection selection)
     {
         this.treeViewer.setSelection(selection);
+    }
+
+    public void expandAll()
+    {
+        this.treeViewer.expandAll();
+    }
+
+    public void collapseAll()
+    {
+        this.treeViewer.collapseAll();
     }
 }

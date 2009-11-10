@@ -1,9 +1,7 @@
-
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -13,20 +11,20 @@
 
 package org.carrot2.core;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
 import org.carrot2.core.attribute.Init;
 import org.carrot2.util.CloseableUtils;
+import org.carrot2.util.ReflectionUtils;
 import org.carrot2.util.attribute.*;
 import org.carrot2.util.resource.*;
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.load.Commit;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 
 /**
@@ -41,8 +39,8 @@ public class ProcessingComponentDescriptor
     /** Cached component class instantiated from {@link #componentClassName}. */
     private Class<? extends IProcessingComponent> componentClass;
 
-    /** If <code>true</code> component class and its instances are available. */
-    private boolean componentAvailable;
+    /** If not <code>null</code>, component initialization ended with an exception. */
+    private Throwable initializationException;
 
     @Attribute
     private String id;
@@ -114,8 +112,8 @@ public class ProcessingComponentDescriptor
 
     /**
      * @return Returns the {@link Class} object for this component.
-     * @throws {@link RuntimeException} if the class cannot be defined for some reason
-     *         (class loader issues).
+     * @throws RuntimeException if the class cannot be defined for some reason (class
+     *             loader issues).
      */
     @SuppressWarnings("unchecked")
     public synchronized Class<? extends IProcessingComponent> getComponentClass()
@@ -124,8 +122,8 @@ public class ProcessingComponentDescriptor
         {
             try
             {
-                this.componentClass = (Class) Class.forName(componentClassName, true,
-                    Thread.currentThread().getContextClassLoader());
+                this.componentClass = (Class<? extends IProcessingComponent>) ReflectionUtils
+                    .classForName(componentClassName);
             }
             catch (Exception e)
             {
@@ -171,6 +169,15 @@ public class ProcessingComponentDescriptor
         return description;
     }
 
+    /**
+     * @return Return the name of a resource from which {@link #getAttributeSets()} were
+     *         read or <code>null</code> if there was no such resource.
+     */
+    public String getAttributeSetsResource()
+    {
+        return attributeSetsResource;
+    }
+
     public AttributeValueSets getAttributeSets()
     {
         return attributeSets;
@@ -194,8 +201,9 @@ public class ProcessingComponentDescriptor
      * is returned.
      * </p>
      */
-    private IProcessingComponent newInitializedInstance() throws InstantiationException,
-        IllegalAccessException
+    @SuppressWarnings("unchecked")
+    private IProcessingComponent newInitializedInstance(boolean init)
+        throws InstantiationException, IllegalAccessException
     {
         final IProcessingComponent instance = getComponentClass().newInstance();
         final Map<String, Object> initAttributes = Maps.newHashMap();
@@ -209,7 +217,16 @@ public class ProcessingComponentDescriptor
         final ControllerContextImpl context = new ControllerContextImpl();
         try
         {
-            ControllerUtils.init(instance, initAttributes, false, context);
+            AttributeBinder
+                .bind(instance, initAttributes, false, Input.class, Init.class);
+
+            if (init)
+            {
+                instance.init(context);
+            }
+
+            AttributeBinder.bind(instance, initAttributes, false, Output.class,
+                Init.class);
         }
         finally
         {
@@ -229,7 +246,26 @@ public class ProcessingComponentDescriptor
     public BindableDescriptor getBindableDescriptor() throws InstantiationException,
         IllegalAccessException
     {
-        return BindableDescriptorBuilder.buildDescriptor(newInitializedInstance());
+        return getBindableDescriptor(true);
+    }
+
+    /**
+     * Builds and returns a {@link BindableDescriptor} for an instance of this
+     * descriptor's {@link IProcessingComponent}, with default {@link Init} attributes
+     * initialized with the default attribute set. If the default attribute set does not
+     * provide values for some required {@link Bindable} {@link Init} attributes, the
+     * returned descriptor may be incomplete.
+     * 
+     * @param init if <code>true</code>, the component will be initialized by calling
+     *            {@link IProcessingComponent#init(IControllerContext)}. Otherwise, the
+     *            {@link Init} attributes will be bound but
+     *            {@link IProcessingComponent#init(IControllerContext)} will not be
+     *            called.
+     */
+    public BindableDescriptor getBindableDescriptor(boolean init)
+        throws InstantiationException, IllegalAccessException
+    {
+        return BindableDescriptorBuilder.buildDescriptor(newInitializedInstance(init));
     }
 
     /**
@@ -238,7 +274,7 @@ public class ProcessingComponentDescriptor
      */
     public boolean isComponentAvailable()
     {
-        return componentAvailable;
+        return this.initializationException == null;
     }
 
     /**
@@ -246,6 +282,8 @@ public class ProcessingComponentDescriptor
      */
     private void loadAttributeSets() throws Exception
     {
+        attributeSets = new AttributeValueSets();
+
         final ResourceUtils resourceUtils = ResourceUtilsFactory
             .getDefaultResourceUtils();
 
@@ -256,6 +294,12 @@ public class ProcessingComponentDescriptor
         {
             // Try to load from the directly provided location
             resource = resourceUtils.getFirst(attributeSetsResource, clazz);
+
+            if (resource == null)
+            {
+                throw new IOException("Attribute set resource not found: "
+                    + attributeSetsResource);
+            }
         }
 
         if (resource == null)
@@ -299,17 +343,43 @@ public class ProcessingComponentDescriptor
     @SuppressWarnings("unused")
     private void onCommit()
     {
-        this.componentAvailable = true;
+        this.initializationException = null;
         try
         {
             loadAttributeSets();
-            newInitializedInstance();
+            newInitializedInstance(true);
         }
         catch (Throwable e)
         {
-            Logger.getLogger(this.getClass()).warn(
+            org.slf4j.LoggerFactory.getLogger(this.getClass()).warn(
                 "Component availability failure: " + componentClassName, e);
-            this.componentAvailable = false;
+            this.initializationException = e;
         }
+    }
+
+    /**
+     * Transforms a {@link ProcessingComponentDescriptor} to its identifier.
+     */
+    public static final class ProcessingComponentDescriptorToId implements
+        Function<ProcessingComponentDescriptor, String>
+    {
+        public static final ProcessingComponentDescriptorToId INSTANCE = new ProcessingComponentDescriptorToId();
+
+        private ProcessingComponentDescriptorToId()
+        {
+        }
+
+        public String apply(ProcessingComponentDescriptor descriptor)
+        {
+            return descriptor.id;
+        }
+    }
+
+    /**
+     * Returns initialization failure ({@link Throwable}) or <code>null</code>.
+     */
+    public Throwable getInitializationFailure()
+    {
+        return this.initializationException;
     }
 }

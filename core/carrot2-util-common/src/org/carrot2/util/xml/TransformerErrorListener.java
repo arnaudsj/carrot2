@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -16,7 +15,7 @@ package org.carrot2.util.xml;
 import javax.xml.transform.ErrorListener;
 import javax.xml.transform.TransformerException;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 
 /**
  * An {@link ErrorListener} that reacts to errors when transforming (applying) a
@@ -24,7 +23,7 @@ import org.apache.log4j.Logger;
  */
 public final class TransformerErrorListener implements ErrorListener
 {
-    private final static Logger logger = Logger.getLogger(TransformerErrorListener.class);
+    private final static Logger logger = org.slf4j.LoggerFactory.getLogger(TransformerErrorListener.class);
 
     /**
      * We store the exception internally as a workaround to xalan, which reports

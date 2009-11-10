@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -15,12 +14,11 @@ package org.carrot2.workbench.vis.circles;
 
 import java.util.Dictionary;
 import java.util.Hashtable;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.commons.lang.StringUtils;
 import org.carrot2.workbench.core.helpers.Utils;
-import org.eclipse.core.runtime.*;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.equinox.http.jetty.JettyConfigurator;
 import org.osgi.framework.*;
 
@@ -86,7 +84,6 @@ final class WebServiceManager
         d.put("context.path", "/");
         d.put("other.info", otherInfo);
 
-        Logger.getLogger("org.mortbay").setLevel(Level.WARNING);
         JettyConfigurator.startServer(webappName, d);
         checkBundle();
         

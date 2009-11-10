@@ -1,8 +1,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -21,6 +20,7 @@ import org.apache.commons.lang.ObjectUtils;
 import org.carrot2.util.*;
 import org.carrot2.util.attribute.AttributeLevel;
 import org.carrot2.util.resource.FileResource;
+import org.junit.Before;
 import org.junit.Test;
 import org.simpleframework.xml.*;
 import org.simpleframework.xml.load.*;
@@ -32,6 +32,12 @@ import com.google.common.collect.*;
  */
 public class SimpleXmlWrappersTest
 {
+    @Before
+    public void clearWrappers()
+    {
+        SimpleXmlWrappers.clearWrappers();
+    }
+
     @Test
     public void testByte() throws Exception
     {
@@ -114,6 +120,12 @@ public class SimpleXmlWrappersTest
         check(new FileResource(new File(".").getAbsoluteFile()));
     }
 
+    @Test
+    public void testNonprimitiveClassWithDefaultConstructor() throws Exception
+    {
+        check(new Nonprimitive());
+    }
+
     enum TestEnum
     {
         TEST1, TEST2;
@@ -122,6 +134,25 @@ public class SimpleXmlWrappersTest
         public String toString()
         {
             return name().toLowerCase();
+        }
+    }
+
+    public static class Nonprimitive
+    {
+        @Override
+        public boolean equals(Object obj)
+        {
+            // We're using the default constructor to deserialize instance of this
+            // class, so it doesn't make sense to try to tell the difference between
+            // different instances.
+            return ObjectUtils.equals(this.getClass(), obj != null ? obj.getClass()
+                : null);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return getClass().hashCode();
         }
     }
 
@@ -177,7 +208,7 @@ public class SimpleXmlWrappersTest
         final Map<String, Object> map = Maps.newHashMap();
         check(populateTestMap(map));
     }
-    
+
     @Test
     public void testHashMapWithList() throws Exception
     {
@@ -185,14 +216,14 @@ public class SimpleXmlWrappersTest
         map.put("list", Lists.newArrayList("test1", "test2", "test3"));
         check(map);
     }
-    
+
     @Test
     public void testTreeMap() throws Exception
     {
         final Map<String, Object> map = Maps.newTreeMap();
         check(populateTestMap(map));
     }
-    
+
     @Test
     public void testNestedMaps() throws Exception
     {
@@ -320,8 +351,16 @@ public class SimpleXmlWrappersTest
         }
     }
 
+    static class SubclassWithWrapper extends ClassWithWrapper
+    {
+        public SubclassWithWrapper(Integer integer, String string)
+        {
+            super(integer, string);
+        }
+    }
+
     @Test
-    public void testClassWithWrapper() throws Exception
+    public void testClassWithWrapperStrictMatched() throws Exception
     {
         SimpleXmlWrappers.addWrapper(ClassWithWrapper.class,
             ClassWithWrapperWrapper.class);
@@ -331,11 +370,48 @@ public class SimpleXmlWrappersTest
         check(new ClassWithWrapper(null, null));
     }
 
+    @Test
+    public void testClassWithWrapperStrictNotMatched() throws Exception
+    {
+        SimpleXmlWrappers.addWrapper(ClassWithWrapper.class,
+            ClassWithWrapperWrapper.class);
+        checkNotSerialized(new SubclassWithWrapper(10, "test"));
+    }
+    
+    @Test
+    public void testClassWithWrapperNotStrictMatched() throws Exception
+    {
+        SimpleXmlWrappers.addWrapper(ClassWithWrapper.class,
+            ClassWithWrapperWrapper.class, false);
+        check(new SubclassWithWrapper(10, "test"));
+        check(new SubclassWithWrapper(-5, null));
+        check(new SubclassWithWrapper(null, "test"));
+        check(new SubclassWithWrapper(null, null));
+    }
+
+    @Test
+    public void testValueWithDefaultStringType() throws Exception
+    {
+        final String input = "<map><attribute key='key'><value value='value'/></attribute></map>";
+        final MapContainer deserialized = new Persister().read(MapContainer.class, input);
+        assertThat(deserialized.map.get("key")).isEqualTo("value");
+    }
+
     public void check(Object value) throws Exception
     {
         checkMap(Long.toString(value != null ? value.hashCode() : 0), value);
         checkList(value);
         checkSet(value);
+    }
+
+    public void checkNotSerialized(Object value) throws Exception
+    {
+        final StringWriter writer = new StringWriter();
+        final Persister persister = new Persister();
+        persister.write(SimpleXmlWrappers.wrap(value), writer);
+        final SimpleXmlWrapperValue deserialized = persister.read(
+            SimpleXmlWrapperValue.class, writer.toString());
+        assertThat(SimpleXmlWrappers.unwrap(deserialized)).isNull();
     }
 
     public void checkMap(String key, Object value) throws Exception
@@ -372,6 +448,7 @@ public class SimpleXmlWrappersTest
     }
 
     @Root(name = "map")
+    @SuppressWarnings("unused")
     private static class MapContainer
     {
         private Map<String, Object> map;
@@ -402,6 +479,7 @@ public class SimpleXmlWrappersTest
     }
 
     @Root(name = "list")
+    @SuppressWarnings("unused")
     private static class ListContainer
     {
         private List<Object> list;
@@ -432,6 +510,7 @@ public class SimpleXmlWrappersTest
     }
 
     @Root(name = "set")
+    @SuppressWarnings("unused")
     private static class SetContainer
     {
         private Set<Object> set;

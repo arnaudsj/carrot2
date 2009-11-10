@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -18,7 +17,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 
 import com.google.common.collect.Lists;
 
@@ -27,7 +26,7 @@ import com.google.common.collect.Lists;
  */
 public class ClassRelativeLocator implements IResourceLocator
 {
-    private final static Logger logger = Logger.getLogger(ClassRelativeLocator.class);
+    private final static Logger logger = org.slf4j.LoggerFactory.getLogger(ClassRelativeLocator.class);
 
     /**
      *

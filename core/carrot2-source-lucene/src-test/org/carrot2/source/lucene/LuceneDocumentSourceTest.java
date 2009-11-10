@@ -1,9 +1,7 @@
-
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -13,16 +11,11 @@
 
 package org.carrot2.source.lucene;
 
-import static org.carrot2.core.test.SampleDocumentData.DOCUMENTS_DATA_MINING;
 import static org.fest.assertions.Assertions.assertThat;
 
 import java.util.Arrays;
 
 import org.apache.lucene.analysis.SimpleAnalyzer;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.Field.Store;
-import org.apache.lucene.document.Field.TermVector;
-import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.TermQuery;
@@ -33,14 +26,12 @@ import org.carrot2.core.Document;
 import org.carrot2.core.attribute.AttributeNames;
 import org.carrot2.core.test.QueryableDocumentSourceTestBase;
 import org.carrot2.util.attribute.AttributeUtils;
-import org.junit.*;
-import org.junit.runner.RunWith;
-import org.junitext.runners.AnnotationRunner;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * Tests Lucene document source.
  */
-@RunWith(AnnotationRunner.class)
 public class LuceneDocumentSourceTest extends
     QueryableDocumentSourceTestBase<LuceneDocumentSource>
 {
@@ -50,26 +41,9 @@ public class LuceneDocumentSourceTest extends
     @BeforeClass
     public static void prepareIndex() throws Exception
     {
-        analyzer = new SimpleAnalyzer();
         directory = new RAMDirectory();
-
-        final IndexWriter w = new IndexWriter(directory, analyzer, true);
-        for (Document d : DOCUMENTS_DATA_MINING)
-        {
-            org.apache.lucene.document.Document doc = new org.apache.lucene.document.Document();
-
-            doc.add(new Field("title", (String) d.getField(Document.TITLE), Store.YES,
-                Field.Index.TOKENIZED, TermVector.WITH_POSITIONS_OFFSETS));
-
-            doc.add(new Field("snippet", (String) d.getField(Document.SUMMARY),
-                Store.YES, Field.Index.TOKENIZED, TermVector.WITH_POSITIONS_OFFSETS));
-
-            doc.add(new Field("url", (String) d.getField(Document.CONTENT_URL),
-                Store.YES, Field.Index.NO));
-
-            w.addDocument(doc);
-        }
-        w.close();
+        analyzer = new SimpleAnalyzer();
+        LuceneIndexUtils.createAndPopulateIndex(directory, analyzer);
     }
 
     @Override

@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -45,8 +44,7 @@ public final class EnumEditor extends MappedValueComboEditor
         }
         else if (String.class.equals(clazz))
         {
-            final ValueHintEnum hint = (ValueHintEnum) descriptor
-                .getAnnotation(ValueHintEnum.class);
+            final ValueHintEnum hint = descriptor.getAnnotation(ValueHintEnum.class);
 
             if (hint == null)
             {
@@ -93,7 +91,7 @@ public final class EnumEditor extends MappedValueComboEditor
         {
             asString = ((IValueHintMapping) newValue).getAttributeValue();
         }
-        else if (newValue instanceof Enum)
+        else if (Enum.class.isInstance(newValue))
         {
             asString = ((Enum<?>) newValue).name();
         }

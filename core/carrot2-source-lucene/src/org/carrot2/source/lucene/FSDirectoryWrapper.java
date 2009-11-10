@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -16,7 +15,6 @@ package org.carrot2.source.lucene;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.log4j.Logger;
 import org.apache.lucene.store.FSDirectory;
 import org.carrot2.util.simplexml.ISimpleXmlWrapper;
 import org.simpleframework.xml.Element;
@@ -56,11 +54,11 @@ public final class FSDirectoryWrapper implements ISimpleXmlWrapper<FSDirectory>
     {
         try
         {
-            value = FSDirectory.getDirectory(new File(indexPath));
+            value = FSDirectory.open(new File(indexPath));
         }
         catch (IOException e)
         {
-            Logger.getLogger(FSDirectoryWrapper.class).warn(
+            org.slf4j.LoggerFactory.getLogger(FSDirectoryWrapper.class).warn(
                 "Could not deserialize index location.", e);
         }
     }    

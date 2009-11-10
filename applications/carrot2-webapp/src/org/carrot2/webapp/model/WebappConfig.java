@@ -1,8 +1,8 @@
+
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -15,7 +15,7 @@ package org.carrot2.webapp.model;
 import java.io.InputStream;
 import java.util.*;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.core.*;
 import org.carrot2.core.attribute.AttributeNames;
 import org.carrot2.core.attribute.InternalAttributePredicate;
@@ -36,7 +36,7 @@ import com.google.common.collect.*;
  */
 public class WebappConfig
 {
-    private final static Logger log = Logger.getLogger(WebappConfig.class);
+    private final static Logger log = org.slf4j.LoggerFactory.getLogger(WebappConfig.class);
 
     @Element(required = false)
     public ProcessingComponentSuite components;
@@ -74,7 +74,7 @@ public class WebappConfig
     public String skinsFolder;
 
     @Attribute(name = "component-suite")
-    public String componentSuite = "carrot2-default/suite-webapp.xml";
+    public String componentSuite = "suites/suite-webapp.xml";
 
     @Attribute(name = "search-url", required = false)
     public final String searchUrl = "search";
@@ -104,9 +104,19 @@ public class WebappConfig
     @Attribute(name = "skin-param", required = false)
     public final static String SKIN_PARAM = "skin";
 
-    /** Application-wide instance of the configuration */
+    /** Application-wide instance of the configuration. */
     public final static WebappConfig INSTANCE;
 
+    /*
+     * TODO: Static initialization blocks suck because you can't really predict when they
+     * are called and thus which exception handlers may potentially consume their failure.
+     * Ideally, webapp-global resources should be stored in the servlet context (and
+     * initialized by one of the servlets in the init() method. I see the calls
+     * to INSTANCE are scattered all over the place, so it will be hard to achieve this,
+     * but even a lazy-init factory method seems better than a static block to me. This
+     * is a potential headache waiting to happen, especially if somebody wants to 
+     * modify component suites on their own.
+     */
     static
     {
         try
@@ -144,7 +154,8 @@ public class WebappConfig
         }
         catch (Exception e)
         {
-            throw new RuntimeException("Could not load application config", e);
+            log.error("Could not load application config.", e);
+            throw new RuntimeException("Could not load application config.", e);
         }
     }
 
@@ -164,7 +175,7 @@ public class WebappConfig
             }
         }
 
-        return null;
+        return ModelWithDefault.getDefault(skins);
     }
 
     public RequestModel setDefaults(RequestModel requestModel)

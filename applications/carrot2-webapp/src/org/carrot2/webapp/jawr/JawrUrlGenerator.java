@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -20,7 +19,7 @@ import java.util.List;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.util.StreamUtils;
 
 import net.jawr.web.resource.bundle.handler.ResourceBundlesHandler;
@@ -32,7 +31,7 @@ import net.jawr.web.servlet.RendererRequestUtils;
  */
 public class JawrUrlGenerator
 {
-    private static final Logger logger = Logger.getLogger(JawrUrlGenerator.class);
+    private static final Logger logger = org.slf4j.LoggerFactory.getLogger(JawrUrlGenerator.class);
 
     private final ResourceBundlesHandler cssJawrHandler;
     private final ResourceBundlesHandler jsJawrHandler;
@@ -84,7 +83,7 @@ public class JawrUrlGenerator
         catch (IOException e)
         {
             // Cannot happen really
-            logger.error(e);
+            logger.error(e.getMessage());
         }
 
         return links;

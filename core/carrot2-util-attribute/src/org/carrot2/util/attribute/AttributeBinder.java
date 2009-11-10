@@ -1,8 +1,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -458,10 +457,6 @@ public class AttributeBinder
                 final Method valueOfMethod = fieldType.getMethod("valueOf", String.class);
                 return valueOfMethod.invoke(null, stringValue);
             }
-            catch (RuntimeException e)
-            {
-                throw e;
-            }
             catch (NoSuchMethodException e)
             {
                 return null;
@@ -478,7 +473,8 @@ public class AttributeBinder
                 {
                     return null;
                 }
-                else {
+                else
+                {
                     throw ExceptionUtils.wrapAsRuntimeException(target);
                 }
             }
@@ -528,7 +524,9 @@ public class AttributeBinder
                     {
                         // Throw exception only if the current value is null
                         throw new AttributeBindingException(key,
-                            "No value for required attribute: " + key);
+                            "No value for required attribute: " + key + " ("
+                                + field.getDeclaringClass().getName() + "#"
+                                + field.getName() + ")");
                     }
                     return;
                 }
@@ -557,7 +555,7 @@ public class AttributeBinder
                 // Notice that if some extra annotations are provided, the newly
                 // created instance will get only those attributes bound that
                 // match any of the extra annotations.
-                if (value instanceof Class && !field.getType().equals(Class.class))
+                if (Class.class.isInstance(value) && !field.getType().equals(Class.class))
                 {
                     final Class<?> clazz = ((Class<?>) value);
                     try

@@ -1,8 +1,8 @@
+
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -15,7 +15,7 @@ package org.carrot2.util.resource;
 import java.io.*;
 import java.util.ArrayList;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.util.StreamUtils;
 
 import com.google.common.collect.Lists;
@@ -29,7 +29,7 @@ public final class ResourceUtils
     /**
      * Logger instance.
      */
-    private final static Logger logger = Logger.getLogger(ResourceUtils.class);
+    private final static Logger logger = org.slf4j.LoggerFactory.getLogger(ResourceUtils.class);
 
     /**
      * An array of resource locators (used first to last).

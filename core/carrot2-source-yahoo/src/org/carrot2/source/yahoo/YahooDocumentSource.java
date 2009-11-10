@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -15,7 +14,7 @@ package org.carrot2.source.yahoo;
 
 import java.util.concurrent.Callable;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.core.*;
 import org.carrot2.core.attribute.Init;
 import org.carrot2.core.attribute.Processing;
@@ -31,7 +30,7 @@ import org.carrot2.util.attribute.constraint.ImplementingClasses;
 public final class YahooDocumentSource extends MultipageSearchEngine
 {
     /** Logger for this class. */
-    final static Logger logger = Logger.getLogger(YahooDocumentSource.class);
+    final static Logger logger = org.slf4j.LoggerFactory.getLogger(YahooDocumentSource.class);
 
     /**
      * Maximum concurrent threads from all instances of this component.

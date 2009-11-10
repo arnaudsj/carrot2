@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -14,7 +13,6 @@
 package org.carrot2.util.attribute;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
 
 import com.thoughtworks.qdox.JavaDocBuilder;
 import com.thoughtworks.qdox.model.AbstractJavaEntity;
@@ -200,7 +198,7 @@ abstract class MetadataExtractor
             catch (Throwable e)
             {
                 // Thrown if unknown enum
-                Logger.getLogger(MetadataExtractor.class).warn(
+                org.slf4j.LoggerFactory.getLogger(MetadataExtractor.class).warn(
                     "Ignoring unknown attribute level: " + value);
             }
         }

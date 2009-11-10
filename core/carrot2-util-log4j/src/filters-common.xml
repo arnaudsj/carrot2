@@ -18,6 +18,7 @@
 
 <!-- Apache Axis -->
 <logger name="org.apache.axis"><level value="warn"/></logger>
+<logger name="org.apache.axis.utils.JavaUtils"><level value="error"/></logger>
 
 <!-- JETTY -->
 <logger name="org.mortbay"><level value="warn"/></logger>
@@ -33,4 +34,4 @@
 <logger name="org.apache.velocity"><level value="info" /></logger>
 
 <!-- JAWR -->
-<logger name="net.jawr"><level value="info" /></logger>
+<logger name="net.jawr"><level value="warn" /></logger>

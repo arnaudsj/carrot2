@@ -1,8 +1,8 @@
+
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -21,7 +21,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.commons.httpclient.*;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.core.attribute.Init;
 import org.carrot2.core.attribute.Processing;
 import org.carrot2.source.MultipageSearchEngineMetadata;
@@ -38,7 +38,7 @@ import org.xml.sax.*;
 public abstract class YahooSearchService
 {
     /** Logger for this object. */
-    protected final Logger logger = Logger.getLogger(this.getClass().getName());
+    protected final Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass().getName());
 
     /**
      * Query types.

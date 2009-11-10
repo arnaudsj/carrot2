@@ -1,8 +1,8 @@
+
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 import org.carrot2.core.*;
 import org.carrot2.core.attribute.Init;
 import org.carrot2.core.attribute.Processing;
@@ -39,13 +39,13 @@ import com.sun.syndication.fetcher.impl.HttpURLFeedFetcher;
  * <p>
  * Based on code donated by Julien Nioche.
  * 
- * @see <a href="http://www.opensearch.org">OpenSearch.org< /a>
+ * @see <a href="http://www.opensearch.org">OpenSearch.org</a>
  */
 @Bindable(prefix = "OpenSearchDocumentSource")
 public class OpenSearchDocumentSource extends MultipageSearchEngine
 {
     /** Logger for this class. */
-    final static Logger logger = Logger.getLogger(OpenSearchDocumentSource.class);
+    final static Logger logger = org.slf4j.LoggerFactory.getLogger(OpenSearchDocumentSource.class);
 
     /**
      * Maximum concurrent threads from all instances of this component.
@@ -241,10 +241,10 @@ public class OpenSearchDocumentSource extends MultipageSearchEngine
                         final SyndEntry entry = (SyndEntry) it.next();
                         final Document document = new Document();
 
-                        document.addField(Document.TITLE, clean(entry.getTitle()));
-                        document.addField(Document.SUMMARY, clean(entry.getDescription()
+                        document.setField(Document.TITLE, clean(entry.getTitle()));
+                        document.setField(Document.SUMMARY, clean(entry.getDescription()
                             .getValue()));
-                        document.addField(Document.CONTENT_URL, entry.getLink());
+                        document.setField(Document.CONTENT_URL, entry.getLink());
 
                         response.results.add(document);
                     }

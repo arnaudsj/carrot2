@@ -57,6 +57,16 @@
       </type-editor>
 
       <type-editor
+            attribute-class="java.io.File"
+            class="org.carrot2.workbench.editors.impl.DirectoryEditor">
+         <constraints>
+            <constraint
+                  constraint-class="org.carrot2.util.attribute.constraint.IsDirectory">
+            </constraint>
+         </constraints>
+      </type-editor>
+
+      <type-editor
             attribute-class="org.carrot2.util.resource.IResource"
             class="org.carrot2.workbench.editors.impl.ResourceEditor">
       </type-editor>
@@ -65,7 +75,5 @@
             attribute-class="java.lang.String"
             class="org.carrot2.workbench.editors.impl.StringEditor">
       </type-editor>
-      
    </extension>
-
 </plugin>

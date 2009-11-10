@@ -2,8 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2008, Dawid Weiss, Stanisław Osiński.
- * Portions (C) Contributors listed in "carrot2.CONTRIBUTORS" file.
+ * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -19,13 +18,13 @@ import java.util.concurrent.Callable;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.carrot2.core.*;
-import org.carrot2.core.attribute.Init;
-import org.carrot2.core.attribute.Processing;
+import org.carrot2.core.attribute.*;
 import org.carrot2.source.*;
+import org.carrot2.text.linguistic.LanguageCode;
 import org.carrot2.util.attribute.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.microsoft.msnsearch.*;
 
@@ -40,16 +39,7 @@ public final class MicrosoftLiveDocumentSource extends MultipageSearchEngine
     public final static String CARROTSEARCH_APPID = "DE531D8A42139F590B253CADFAD7A86172F93B96";
 
     /** Logger for this class. */
-    private final static Logger logger = Logger
-        .getLogger(MicrosoftLiveDocumentSource.class);
-
-    /*
-     * Disable annoying "missing activation.jar" message from Axis.
-     */
-    static
-    {
-        Logger.getLogger("org.apache.axis.utils.JavaUtils").setLevel(Level.ERROR);
-    }
+    private final static Logger logger = LoggerFactory.getLogger(MicrosoftLiveDocumentSource.class);
 
     /**
      * Maximum concurrent threads from all instances of this component.
@@ -98,6 +88,17 @@ public final class MicrosoftLiveDocumentSource extends MultipageSearchEngine
     public SafeSearch safeSearch = SafeSearch.MODERATE;
 
     /**
+     * An internal attribute to capture the previously set active language and possibly
+     * set a new better matching value based on the supplied {@link #culture} value.
+     */
+    @Processing
+    @Input
+    @Output
+    @Attribute(key = AttributeNames.ACTIVE_LANGUAGE)
+    @Internal
+    private LanguageCode language;
+    
+    /**
      * Microsoft Live! metadata.
      */
     static final MultipageSearchEngineMetadata metadata = new MultipageSearchEngineMetadata(
@@ -110,8 +111,19 @@ public final class MicrosoftLiveDocumentSource extends MultipageSearchEngine
     public void process() throws ProcessingException
     {
         super.process(metadata, getSharedExecutor(MAX_CONCURRENT_THREADS, getClass()));
+        
+        // Set best matching language code based on the culture info. The value will
+        // be collected and propagated for components down the chain.
+        if (language == null) 
+        {
+            LanguageCode bestMatchingLanguageCode = culture.toLanguageCode();
+            if (bestMatchingLanguageCode != null) 
+            {
+                language = bestMatchingLanguageCode;
+            }
+        }
     }
-
+    
     /**
      * Create a single page fetcher for the search range.
      */
@@ -209,18 +221,18 @@ public final class MicrosoftLiveDocumentSource extends MultipageSearchEngine
             }
 
             final Document document = new Document();
-            document.addField(Document.CONTENT_URL, tmp);
+            document.setField(Document.CONTENT_URL, tmp);
 
             tmp = StringEscapeUtils.unescapeHtml(searchResults[j].getTitle());
             if (!StringUtils.isEmpty(tmp))
             {
-                document.addField(Document.TITLE, tmp);
+                document.setField(Document.TITLE, tmp);
             }
 
             tmp = StringEscapeUtils.unescapeHtml(searchResults[j].getDescription());
             if (!StringUtils.isEmpty(tmp))
             {
-                document.addField(Document.SUMMARY, tmp);
+                document.setField(Document.SUMMARY, tmp);
             }
 
             docs.add(document);
