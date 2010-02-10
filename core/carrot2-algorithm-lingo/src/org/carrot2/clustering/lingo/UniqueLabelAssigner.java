@@ -1,8 +1,7 @@
-
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
+ * Copyright (C) 2002-2010, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -12,23 +11,27 @@
 
 package org.carrot2.clustering.lingo;
 
+import org.apache.mahout.math.matrix.DoubleMatrix2D;
 import org.carrot2.text.preprocessing.PreprocessingContext;
 import org.carrot2.util.Pair;
 import org.carrot2.util.attribute.Bindable;
 
-import bak.pcj.list.DoubleArrayList;
-import bak.pcj.list.IntArrayList;
-import bak.pcj.map.IntKeyIntMap;
-import cern.colt.matrix.DoubleMatrix2D;
+import com.carrotsearch.hppc.*;
 
 /**
- * Assigns unique labels to each base vector using a greedy algorithm.
+ * Assigns unique labels to each base vector using a greedy algorithm. For each base
+ * vector chooses the label that maximizes the base vector--label term vector cosine
+ * similarity and has not been previously selected. Once a label is selected, it will not
+ * be used to label any other vector. This algorithm does not create duplicate cluster
+ * labels, which usually means that this assignment method will create more clusters than
+ * {@link SimpleLabelAssigner}. This method is slightly slower than
+ * {@link SimpleLabelAssigner}.
  */
 @Bindable
 public class UniqueLabelAssigner implements ILabelAssigner
 {
     public void assignLabels(LingoProcessingContext context, DoubleMatrix2D stemCos,
-        IntKeyIntMap filteredRowToStemIndex, DoubleMatrix2D phraseCos)
+        IntIntOpenHashMap filteredRowToStemIndex, DoubleMatrix2D phraseCos)
     {
         final PreprocessingContext preprocessingContext = context.preprocessingContext;
         final int firstPhraseIndex = preprocessingContext.allLabels.firstPhraseIndex;

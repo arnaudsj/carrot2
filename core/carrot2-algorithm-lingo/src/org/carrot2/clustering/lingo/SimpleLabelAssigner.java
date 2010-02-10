@@ -2,7 +2,7 @@
 /*
  * Carrot2 project.
  *
- * Copyright (C) 2002-2009, Dawid Weiss, Stanisław Osiński.
+ * Copyright (C) 2002-2010, Dawid Weiss, Stanisław Osiński.
  * All rights reserved.
  *
  * Refer to the full license file "carrot2.LICENSE"
@@ -14,22 +14,27 @@ package org.carrot2.clustering.lingo;
 
 import java.util.Arrays;
 
+import org.apache.mahout.math.jet.math.Functions;
+import org.apache.mahout.math.matrix.DoubleMatrix2D;
 import org.carrot2.matrix.MatrixUtils;
 import org.carrot2.text.preprocessing.PreprocessingContext;
 import org.carrot2.util.attribute.Bindable;
 
-import bak.pcj.map.IntKeyIntMap;
-import cern.colt.matrix.DoubleMatrix2D;
-import cern.jet.math.Functions;
+import com.carrotsearch.hppc.IntIntOpenHashMap;
 
 /**
- * Uses a very simple algorithm to match labels to base vectors.
+ * A simple and fast label assigner. For each base vector chooses the label that maximizes
+ * the base vector--label term vector cosine similarity. Different vectors can get the
+ * same label assigned, which means the number of final labels (after duplicate removal)
+ * may be smaller than the number of base vectors on input. 
+ * 
+ * @see UniqueLabelAssigner
  */
 @Bindable
 public class SimpleLabelAssigner implements ILabelAssigner
 {
     public void assignLabels(LingoProcessingContext context, DoubleMatrix2D stemCos,
-        IntKeyIntMap filteredRowToStemIndex, DoubleMatrix2D phraseCos)
+        IntIntOpenHashMap filteredRowToStemIndex, DoubleMatrix2D phraseCos)
     {
         final PreprocessingContext preprocessingContext = context.preprocessingContext;
         final int firstPhraseIndex = preprocessingContext.allLabels.firstPhraseIndex;
